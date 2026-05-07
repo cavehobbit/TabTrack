@@ -1,5 +1,5 @@
-const STORAGE_KEY = "tabsense_state_v2";
-const HEARTBEAT = "tabsense-heartbeat";
+const STORAGE_KEY = "tabber_state_v3";
+const HEARTBEAT = "tabber-heartbeat";
 
 const PRODUCTIVE = [
   "github.com",
@@ -22,7 +22,31 @@ const DISTRACTING = [
   "netflix.com"
 ];
 
-let state = { running: null, days: {} };
+const DISTRACTION_THRESHOLDS_MIN = [10, 20, 30, 45, 60, 90];
+const REMINDER_COOLDOWN_MS = 12 * 60 * 1000;
+
+const GHOST_ICON = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <rect width="128" height="128" fill="white"/>
+  <path d="M64 14c-23.2 0-42 18.8-42 42v58l11-8 11 8 10-8 10 8 10-8 11 8 11-8 10 8V56c0-23.2-18.8-42-42-42z" fill="black"/>
+  <circle cx="50" cy="58" r="6" fill="white"/>
+  <circle cx="78" cy="58" r="6" fill="white"/>
+  <path d="M48 79c6 7 26 7 32 0" stroke="white" stroke-width="6" fill="none" stroke-linecap="round"/>
+</svg>
+`)}`;
+
+let state = {
+  running: null,
+  days: {},
+  ghost: {
+    dayKey: "",
+    lastMilestoneMin: 0,
+    lastFocusAlertAt: 0,
+    lastSentAt: 0,
+    messages: []
+  }
+};
+
 let loaded = false;
 
 function localDayKey(ts = Date.now()) {
@@ -38,9 +62,9 @@ function dayStart(key) {
   return new Date(y, m - 1, d).getTime();
 }
 
-function nextMidnight(ts) {
-  const d = new Date(ts);
-  d.setHours(24, 0, 0, 0);
+function nextMidnightFromKey(key) {
+  const d = new Date(dayStart(key));
+  d.setDate(d.getDate() + 1);
   return d.getTime();
 }
 
@@ -62,20 +86,15 @@ function categoryForDomain(domain) {
   return "neutral";
 }
 
-function ensureDay(key) {
-  if (!state.days[key]) {
-    state.days[key] = {
-      totalMs: 0,
-      switches: 0,
-
-      
-      byCategory: { productive: 0, neutral: 0, distracting: 0 },
-      bySite: {},
-      segments: [],
-      lastUpdated: Date.now()
-    };
-  }
-  return state.days[key];
+function emptyDay() {
+  return {
+    totalMs: 0,
+    switches: 0,
+    byCategory: { productive: 0, neutral: 0, distracting: 0 },
+    bySite: {},
+    segments: [],
+    lastUpdated: Date.now()
+  };
 }
 
 function normalizeDay(day) {
@@ -94,10 +113,9 @@ function normalizeDay(day) {
   };
 }
 
-
-
 function normalizeRunning(r) {
   if (!r || typeof r !== "object") return null;
+
   const startedAt = Number(r.startedAt) || Date.now();
   const flushedAt = Number(r.flushedAt) || startedAt;
   const flushedMs = Number(r.flushedMs) || 0;
@@ -115,29 +133,49 @@ function normalizeRunning(r) {
   };
 }
 
+function normalizeGhost(g) {
+  const safe = g && typeof g === "object" ? g : {};
+  return {
+    dayKey: String(safe.dayKey || ""),
+    lastMilestoneMin: Number(safe.lastMilestoneMin) || 0,
+    lastFocusAlertAt: Number(safe.lastFocusAlertAt) || 0,
+    lastSentAt: Number(safe.lastSentAt) || 0,
+    messages: Array.isArray(safe.messages) ? safe.messages.slice(0, 20) : []
+  };
+}
+
+function normalizeState(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+
+  const out = {
+    running: normalizeRunning(src.running),
+    days: {},
+    ghost: normalizeGhost(src.ghost)
+  };
+
+  const days = src.days && typeof src.days === "object" ? src.days : {};
+  for (const [key, day] of Object.entries(days)) {
+    out.days[key] = normalizeDay(day);
+  }
+
+  return out;
+}
+
 async function hydrate() {
   if (loaded) return;
   const data = await chrome.storage.local.get(STORAGE_KEY);
-  const raw = data[STORAGE_KEY] || state;
-
-  state = {
-    running: normalizeRunning(raw.running),
-    days: {}
-  };
-
-  const days = raw.days && typeof raw.days === "object" ? raw.days : {};
-  for (const [key, day] of Object.entries(days)) {
-    state.days[key] = normalizeDay(day);
-  }
-
-
-
+  state = normalizeState(data[STORAGE_KEY]);
   loaded = true;
   await save();
 }
 
 async function save() {
   await chrome.storage.local.set({ [STORAGE_KEY]: state });
+}
+
+function ensureDay(key) {
+  if (!state.days[key]) state.days[key] = emptyDay();
+  return state.days[key];
 }
 
 function addChunk(seg, start, end) {
@@ -147,7 +185,7 @@ function addChunk(seg, start, end) {
   let cursor = start;
   while (cursor < end) {
     const key = localDayKey(cursor);
-    const boundary = nextMidnight(cursor);
+    const boundary = nextMidnightFromKey(key);
     const chunkEnd = Math.min(end, boundary);
     const chunkMs = chunkEnd - cursor;
     const day = ensureDay(key);
@@ -168,9 +206,6 @@ function addChunk(seg, start, end) {
     day.bySite[seg.domain].ms += chunkMs;
     day.bySite[seg.domain].count += 1;
 
-
-
-
     day.segments.push({
       domain: seg.domain,
       title: seg.title,
@@ -188,10 +223,9 @@ function addChunk(seg, start, end) {
   }
 }
 
-
-
-function flushProgress(now = Date.now()) {
+function flushRunning(now = Date.now()) {
   if (!state.running) return 0;
+
   const start = state.running.flushedAt || state.running.startedAt || now;
   const ms = Math.max(0, now - start);
   if (ms <= 0) return 0;
@@ -204,33 +238,145 @@ function flushProgress(now = Date.now()) {
 
 function finalizeRunning(now = Date.now()) {
   if (!state.running) return;
-  flushProgress(now);
+  flushRunning(now);
   state.running = null;
 }
 
+function focusScore(day) {
+  const p = day?.byCategory?.productive || 0;
+  const n = day?.byCategory?.neutral || 0;
+  const d = day?.byCategory?.distracting || 0;
+  const t = p + n + d;
+  return t ? Math.round(((p + n * 0.35) / t) * 100) : 0;
+}
 
+function pushGhostMessage(text, type = "focus") {
+  state.ghost.messages.unshift({
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    ts: Date.now(),
+    text,
+    type
+  });
+  state.ghost.messages = state.ghost.messages.slice(0, 20);
+}
 
-function initRunning(tab, now = Date.now()) {
-  return {
-    tabId: tab.id,
-    windowId: tab.windowId,
-    url: tab.url,
-    title: tab.title || tab.url,
-    domain: domainFromUrl(tab.url),
-    category: categoryForDomain(domainFromUrl(tab.url)),
-    startedAt: now,
-    flushedAt: now,
-    flushedMs: 0
-  };
+function randomFrom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function liveSnapshot(key, now = Date.now()) {
+  const base = normalizeDay(state.days[key] || emptyDay());
+
+  if (state.running) {
+    const liveStart = state.running.flushedAt || state.running.startedAt;
+    const overlapStart = Math.max(liveStart, dayStart(key));
+    const overlapEnd = Math.min(now, nextMidnightFromKey(key));
+
+    if (overlapEnd > overlapStart) {
+      const ms = overlapEnd - overlapStart;
+      base.totalMs += ms;
+      base.byCategory[state.running.category] += ms;
+
+      if (!base.bySite[state.running.domain]) {
+        base.bySite[state.running.domain] = {
+          domain: state.running.domain,
+          title: state.running.title,
+          url: state.running.url,
+          ms: 0,
+          count: 0
+        };
+      }
+
+      base.bySite[state.running.domain].ms += ms;
+      base.bySite[state.running.domain].count += 1;
+
+      base.segments.push({
+        domain: state.running.domain,
+        title: state.running.title,
+        url: state.running.url,
+        category: state.running.category,
+        startedAt: overlapStart,
+        endedAt: overlapEnd,
+        ms,
+        live: true
+      });
+    }
+  }
+
+  base.segments = base.segments.sort((a, b) => a.startedAt - b.startedAt);
+  return base;
+}
+
+function resetGhostDayIfNeeded(today) {
+  if (state.ghost.dayKey !== today) {
+    state.ghost.dayKey = today;
+    state.ghost.lastMilestoneMin = 0;
+    state.ghost.lastFocusAlertAt = 0;
+  }
+}
+
+async function maybeNudge(now = Date.now()) {
+  const today = localDayKey(now);
+  resetGhostDayIfNeeded(today);
+
+  const snap = liveSnapshot(today, now);
+  const distractingMin = Math.floor((snap.byCategory.distracting || 0) / 60000);
+  const totalMin = Math.floor((snap.totalMs || 0) / 60000);
+  const focus = focusScore(snap);
+
+  let message = null;
+  let type = "milestone";
+
+  const nextMilestone = DISTRACTION_THRESHOLDS_MIN.find(
+    t => t > state.ghost.lastMilestoneMin && distractingMin >= t
+  );
+
+  if (nextMilestone) {
+    state.ghost.lastMilestoneMin = nextMilestone;
+    message = randomFrom([
+      `Boo. You've crossed ${nextMilestone} minutes of distraction today. Try one clean focus block.`,
+      `Ghost check: ${nextMilestone} minutes distracted. Close the noisy tab and return to one task.`,
+      `Spooky reminder: distraction is stacking up. Time to pick a single browser tab and commit.`
+    ]);
+  } else if (
+    totalMin >= 20 &&
+    focus < 45 &&
+    now - state.ghost.lastFocusAlertAt > REMINDER_COOLDOWN_MS
+  ) {
+    state.ghost.lastFocusAlertAt = now;
+    type = "focus";
+    message = randomFrom([
+      `Ghost says your focus score is slipping. Lock onto one tab for 10 minutes.`,
+      `Boo... your browsing is getting scattered. Cut the switches and stay on one goal.`,
+      `Reminder from the ghost: the distraction ratio is high. Pick the important tab now.`
+    ]);
+  }
+
+  if (!message) return;
+
+  state.ghost.lastSentAt = now;
+  pushGhostMessage(message, type);
+  await save();
+
+  try {
+    await chrome.notifications.create(`tabber-ghost-${now}`, {
+      type: "basic",
+      iconUrl: GHOST_ICON,
+      title: "Tabber Ghost",
+      message,
+      priority: 2
+    });
+  } catch (e) {
+    console.warn("Notification failed:", e);
+  }
 }
 
 async function pauseTracking() {
   await hydrate();
   finalizeRunning();
+  await maybeNudge();
   await save();
 }
-
-
 
 async function startOrSwitch(tab, { forceTick = false } = {}) {
   await hydrate();
@@ -239,9 +385,6 @@ async function startOrSwitch(tab, { forceTick = false } = {}) {
     await pauseTracking();
     return;
   }
-
-
-
 
   const now = Date.now();
   const next = {
@@ -257,17 +400,14 @@ async function startOrSwitch(tab, { forceTick = false } = {}) {
   };
 
   if (state.running && state.running.tabId === next.tabId) {
-    if (forceTick) {
-      flushProgress(now);
-    }
-
-
+    if (forceTick) flushRunning(now);
 
     state.running.url = next.url;
     state.running.title = next.title;
     state.running.domain = next.domain;
     state.running.category = next.category;
     state.running.windowId = next.windowId;
+
     await save();
     return;
   }
@@ -277,18 +417,17 @@ async function startOrSwitch(tab, { forceTick = false } = {}) {
     ensureDay(localDayKey(now)).switches += 1;
   }
 
-  state.running = initRunning(tab, now);
+  state.running = next;
   await save();
 }
 
-
-
-
 async function syncActiveTab(forceTick = false) {
   await hydrate();
+
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   if (tab) {
     await startOrSwitch(tab, { forceTick });
+    await maybeNudge();
   } else {
     await pauseTracking();
   }
@@ -316,8 +455,6 @@ chrome.runtime.onStartup.addListener(async () => {
   await syncActiveTab();
 });
 
-
-
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === HEARTBEAT) {
     await syncActiveTab(true);
@@ -326,30 +463,35 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   const tab = await chrome.tabs.get(tabId).catch(() => null);
-  if (tab) await startOrSwitch(tab);
+  if (tab) {
+    await startOrSwitch(tab);
+    await maybeNudge();
+  }
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   await hydrate();
 
-  if (!state.running || state.running.tabId !== tabId) return;
-
-  if (changeInfo.url && !isTrackable(tab.url)) {
-    await pauseTracking();
-    return;
-  }
-
   if (changeInfo.url) {
-    flushProgress(Date.now());
-    state.running.url = tab.url || state.running.url;
-    state.running.title = tab.title || state.running.title;
-    state.running.domain = domainFromUrl(state.running.url);
-    state.running.category = categoryForDomain(state.running.domain);
-    await save();
-    return;
+    if (state.running && state.running.tabId === tabId) {
+      flushRunning(Date.now());
+      state.running.url = tab.url || state.running.url;
+      state.running.title = tab.title || state.running.title;
+      state.running.domain = domainFromUrl(state.running.url);
+      state.running.category = categoryForDomain(state.running.domain);
+      await save();
+      await maybeNudge();
+      return;
+    }
+
+    if (!state.running && tab.active && isTrackable(tab.url)) {
+      await startOrSwitch(tab);
+      await maybeNudge();
+      return;
+    }
   }
 
-  if (changeInfo.title) {
+  if (state.running && state.running.tabId === tabId && changeInfo.title) {
     state.running.title = tab.title || state.running.title;
     await save();
   }
@@ -361,9 +503,6 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
     await syncActiveTab();
   }
 });
-
-
-
 
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
   if (windowId === chrome.windows.WINDOW_ID_NONE) {
