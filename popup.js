@@ -1,5 +1,25 @@
 const STORAGE_KEY = "tabber_state_v4";
 
+// Expandd website lists
+const PRODUCTIVE_MATCH = [
+  "github", "docs", "drive", "calendar", "mail",
+  "stackoverflow", "wikipedia", "notion", "chatgpt",
+  "replit", "codepen", "figma", "leetcode", "freecodecamp",
+  "coursera", "khanacademy", "developer.mozilla", "slack", "hackatime"
+];
+
+const DISTRACTING_MATCH = [
+  "youtube", "tiktok", "instagram", "facebook", "reddit",
+  "x.com", "twitter", "netflix", "twitch", "discord",
+  "snapchat", "pinterest", "threads", "imgur", "9gag"
+];
+
+// wether in chrome
+const HAS_CHROME_STORAGE =
+  typeof chrome !== "undefined" &&
+  !!chrome.storage &&
+  !!chrome.storage.local;
+
 let state = {
   running: null,
   days: {},
@@ -12,21 +32,28 @@ let state = {
   }
 };
 
+
+
+
 let selectedKey = localDayKey();
 let compareKey = localDayKey(Date.now() - 86400000);
 
 const els = {
+
+
   statusChip: document.getElementById("statusChip"),
   currentTitle: document.getElementById("currentTitle"),
   currentMeta: document.getElementById("currentMeta"),
   liveElapsed: document.getElementById("liveElapsed"),
   statsGrid: document.getElementById("statsGrid"),
+
   reportSelect: document.getElementById("reportSelect"),
   compareSelect: document.getElementById("compareSelect"),
   reportList: document.getElementById("reportList"),
   timelineBar: document.getElementById("timelineBar"),
   compareGrid: document.getElementById("compareGrid"),
   reportSubtitle: document.getElementById("reportSubtitle"),
+
   reportCount: document.getElementById("reportCount"),
   exportGrid: document.querySelector(".export-grid"),
   ghostToggle: document.getElementById("ghostToggle"),
@@ -34,15 +61,24 @@ const els = {
   ghostPanel: document.getElementById("ghostPanel"),
   ghostFeed: document.getElementById("ghostFeed"),
   ghostNote: document.getElementById("ghostNote"),
-  cursorGhost: document.getElementById("cursorGhost")
+  cursorGhost: document.getElementById("cursorGhost"),
+
+  manualForm: document.getElementById("manualForm"),
+  manualSite: document.getElementById("manualSite"),
+  manualMinutes: document.getElementById("manualMinutes")
 };
 
 function localDayKey(ts = Date.now()) {
+
+
   const d = new Date(ts);
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+
+
+
 }
 
 function dayStart(key) {
@@ -61,6 +97,8 @@ function clone(v) {
 }
 
 function formatDuration(ms) {
+
+
   ms = Math.max(0, ms || 0);
   const totalSeconds = Math.floor(ms / 1000);
   const h = Math.floor(totalSeconds / 3600);
@@ -72,10 +110,13 @@ function formatDuration(ms) {
   return `${s}s`;
 }
 
+
 function formatSignedDuration(ms) {
   const sign = ms > 0 ? "+" : ms < 0 ? "−" : "";
   return `${sign}${formatDuration(Math.abs(ms))}`;
 }
+
+
 
 function formatSignedNumber(n) {
   const sign = n > 0 ? "+" : n < 0 ? "−" : "";
@@ -89,7 +130,10 @@ function formatTime(ts) {
   });
 }
 
+
 function escapeHtml(str) {
+
+
   return String(str).replace(/[&<>"']/g, m => ({
     "&": "&amp;",
     "<": "&lt;",
@@ -102,6 +146,7 @@ function escapeHtml(str) {
 function dayLabel(key) {
   const today = localDayKey();
   const yesterday = localDayKey(Date.now() - 86400000);
+
   if (key === today) return "Today";
   if (key === yesterday) return "Yesterday";
 
@@ -112,6 +157,8 @@ function dayLabel(key) {
     day: "numeric"
   });
 }
+
+
 
 function normalizeDay(day) {
   const safe = day && typeof day === "object" ? day : {};
@@ -137,15 +184,19 @@ function normalizeRunning(r) {
   const flushedMs = Number(r.flushedMs) || 0;
 
   return {
+
+
     tabId: Number(r.tabId),
     windowId: Number(r.windowId),
     url: String(r.url || ""),
     title: String(r.title || r.url || ""),
     domain: String(r.domain || ""),
+
     category: ["productive", "neutral", "distracting"].includes(r.category) ? r.category : "neutral",
     startedAt,
     flushedAt,
     flushedMs
+
   };
 }
 
@@ -160,7 +211,13 @@ function normalizeGhost(g) {
   };
 }
 
+
+
+
+
 function normalizeState(raw) {
+
+
   const src = raw && typeof raw === "object" ? raw : {};
   const out = {
     running: normalizeRunning(src.running),
@@ -176,7 +233,33 @@ function normalizeState(raw) {
   return out;
 }
 
+
+
+async function readSavedState() {
+  if (HAS_CHROME_STORAGE) {
+    const data = await chrome.storage.local.get(STORAGE_KEY);
+    return data[STORAGE_KEY] ?? null;
+  }
+
+  try {
+
+
+    return JSON.parse(localStorage.getItem(STORAGE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+async function writeSavedState(value) {
+  if (HAS_CHROME_STORAGE) {
+    await chrome.storage.local.set({ [STORAGE_KEY]: value });
+  } else {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+  }
+}
+
 function buildVisibleKeys() {
+
   const keys = new Set(Object.keys(state.days || {}));
   const today = localDayKey();
 
@@ -189,7 +272,11 @@ function buildVisibleKeys() {
     keys.add(localDayKey(state.running.flushedAt || state.running.startedAt));
   }
 
+
+
+
   return [...keys].sort((a, b) => b.localeCompare(a));
+
 }
 
 function mergeSegments(segs) {
@@ -197,8 +284,11 @@ function mergeSegments(segs) {
   const out = [];
 
   for (const seg of sorted) {
+
+
     const prev = out[out.length - 1];
-    if (prev && prev.domain === seg.domain && prev.category === seg.category) {
+
+    if (prev && prev.domain === seg.domain && prev.category === seg.category && prev.endedAt >= seg.startedAt) {
       prev.ms += seg.ms;
       prev.endedAt = seg.endedAt;
       prev.live = prev.live || seg.live;
@@ -210,7 +300,10 @@ function mergeSegments(segs) {
   return out;
 }
 
+
+
 function reportForKey(key) {
+
   const base = clone(state.days[key] || {
     totalMs: 0,
     switches: 0,
@@ -218,6 +311,7 @@ function reportForKey(key) {
     bySite: {},
     segments: [],
     lastUpdated: Date.now()
+
   });
 
   const now = Date.now();
@@ -260,11 +354,14 @@ function reportForKey(key) {
     }
   }
 
+
+
   base.segments = mergeSegments(base.segments);
   return base;
 }
 
 function summarize(day) {
+
   const productive = day.byCategory?.productive || 0;
   const neutral = day.byCategory?.neutral || 0;
   const distracting = day.byCategory?.distracting || 0;
@@ -280,6 +377,8 @@ function summarize(day) {
   const topMs = sites[0]?.ms || 0;
 
   return {
+
+
     totalMs: total,
     focus,
     switches: day.switches || 0,
@@ -293,7 +392,10 @@ function summarize(day) {
   };
 }
 
+
 function compareSummary(a, b) {
+
+
   return {
     totalMs: a.totalMs - b.totalMs,
     focus: a.focus - b.focus,
@@ -321,15 +423,21 @@ function ensureSelectionDefaults() {
 }
 
 function populateSelects() {
+
+
   const keys = buildVisibleKeys();
   const options = keys.map(key => {
     const s = summarize(reportForKey(key));
     const label = `${dayLabel(key)} — ${formatDuration(s.totalMs)}`;
+
     return `<option value="${escapeHtml(key)}">${escapeHtml(label)}</option>`;
   }).join("");
 
-  els.reportSelect.innerHTML = options || `<option value="${selectedKey}">${escapeHtml(dayLabel(selectedKey))}</option>`;
-  els.compareSelect.innerHTML = options || `<option value="${compareKey}">${escapeHtml(dayLabel(compareKey))}</option>`;
+  els.reportSelect.innerHTML =
+    options || `<option value="${selectedKey}">${escapeHtml(dayLabel(selectedKey))}</option>`;
+
+  els.compareSelect.innerHTML =
+    options || `<option value="${compareKey}">${escapeHtml(dayLabel(compareKey))}</option>`;
 
   els.reportSelect.value = selectedKey;
   els.compareSelect.value = compareKey;
@@ -338,7 +446,12 @@ function populateSelects() {
 function renderLive() {
   const running = state.running;
 
+  //detct runing
+
+
   if (!running) {
+
+
     els.statusChip.textContent = "IDLE";
     els.currentTitle.textContent = "Idle";
     els.currentMeta.textContent = "No active tracked tab.";
@@ -346,7 +459,9 @@ function renderLive() {
     return;
   }
 
-  const elapsed = (running.flushedMs || 0) + Math.max(0, Date.now() - (running.flushedAt || running.startedAt));
+  const elapsed =
+    (running.flushedMs || 0) +
+    Math.max(0, Date.now() - (running.flushedAt || running.startedAt));
 
   els.statusChip.textContent = "TRACKING";
   els.currentTitle.textContent = running.title || running.domain || "Active tab";
@@ -357,11 +472,14 @@ function renderLive() {
 function renderStats(view) {
   const s = summarize(view);
   const items = [
+
     ["Total time", formatDuration(s.totalMs), "All time in the selected day."],
     ["Focus score", `${s.focus}%`, "Productive + neutral weighted."],
     ["Switches", String(s.switches), "How many tab changes were counted."],
     ["Distracted", formatDuration(s.distracting), "Time spent in distracting sites."]
   ];
+
+
 
   els.statsGrid.innerHTML = items.map(([label, value, sub]) => `
     <div class="stat">
@@ -372,6 +490,8 @@ function renderStats(view) {
   `).join("");
 }
 
+
+
 function renderTimeline(view) {
   const segments = (view.segments || []).slice().sort((a, b) => a.startedAt - b.startedAt);
 
@@ -381,37 +501,46 @@ function renderTimeline(view) {
         No timeline yet. Use the browser normally and segments will appear here.
       </div>
     `;
+
     return;
   }
 
   els.timelineBar.innerHTML = segments.map(seg => {
-    const cls = seg.category === "productive"
-      ? "productive"
-      : seg.category === "distracting"
-        ? "distracting"
-        : "neutral";
+    const cls =
+      seg.category === "productive"
+        ? "productive"
+        : seg.category === "distracting"
+          ? "distracting"
+          : "neutral";
 
-    const title = `${seg.title || seg.domain} • ${formatDuration(seg.ms)}${seg.live ? " • LIVE" : ""}`;
+    const title = `${seg.title || seg.domain} • ${formatDuration(seg.ms)}${seg.live ? " • LIVE" : ""}${seg.manual ? " • MANUAL" : ""}`;
 
     return `
       <div class="segment ${cls}" style="flex:${Math.max(1, seg.ms / 60000)} 1 0%;" title="${escapeHtml(title)}">
         <strong>${escapeHtml(seg.domain || seg.title || "site")}</strong>
-        <small>${escapeHtml(formatDuration(seg.ms))}${seg.live ? " • LIVE" : ""}</small>
+        <small>${escapeHtml(formatDuration(seg.ms))}${seg.live ? " • LIVE" : ""}${seg.manual ? " • MANUAL" : ""}</small>
       </div>
     `;
   }).join("");
 }
+
+
 
 function renderCompare(selectedView, compareView) {
   const a = summarize(selectedView);
   const b = summarize(compareView);
   const d = compareSummary(a, b);
 
+
+  //cards ondash
   const cards = [
+
+
+
     ["Total Δ", formatSignedDuration(d.totalMs), `${dayLabel(selectedKey)} vs ${dayLabel(compareKey)}`],
-    ["Focus Δ", `${formatSignedNumber(d.focus)}%`, `Selected minus compare`],
-    ["Switches Δ", formatSignedNumber(d.switches), `Selected minus compare`],
-    ["Distracted Δ", formatSignedDuration(d.distracting), `Selected minus compare`]
+    ["Focus Δ", `${formatSignedNumber(d.focus)}%`, "Selected minus compare"],
+    ["Switches Δ", formatSignedNumber(d.switches), "Selected minus compare"],
+    ["Distracted Δ", formatSignedDuration(d.distracting), "Selected minus compare"]
   ];
 
   els.compareGrid.innerHTML = cards.map(([label, delta, note]) => `
@@ -450,6 +579,7 @@ function renderReportList() {
     return;
   }
 
+
   els.reportList.innerHTML = visible.map(key => {
     const view = reportForKey(key);
     const s = summarize(view);
@@ -468,11 +598,14 @@ function renderReportList() {
       </div>
     `;
   }).join("");
+
 }
+
 
 function renderReportSubtitle(view) {
   const s = summarize(view);
-  els.reportSubtitle.textContent = `${dayLabel(selectedKey)} · ${formatDuration(s.totalMs)} · ${s.focus}% focus · top: ${s.topTitle}`;
+  els.reportSubtitle.textContent =
+    `${dayLabel(selectedKey)} · ${formatDuration(s.totalMs)} · ${s.focus}% focus · top: ${s.topTitle}`;
 }
 
 function renderGhost() {
@@ -488,6 +621,7 @@ function renderGhost() {
     `;
     els.ghostNote.textContent = "I’ll nudge you when distraction climbs too high.";
     return;
+
   }
 
   els.ghostNote.textContent = feed[0]?.text || "Boo. Stay on track.";
@@ -499,7 +633,7 @@ function renderGhost() {
     </div>
   `).join("");
 }
-
+//fixd erors
 function renderAll() {
   ensureSelectionDefaults();
   populateSelects();
@@ -510,10 +644,73 @@ function renderAll() {
   renderLive();
   renderStats(selectedView);
   renderTimeline(selectedView);
+
+
   renderCompare(selectedView, compareView);
   renderReportSubtitle(selectedView);
   renderReportList();
   renderGhost();
+}
+
+function guessCategoryFromName(name) {
+  const s = String(name || "").toLowerCase();
+  if (PRODUCTIVE_MATCH.some(x => s.includes(x))) return "productive";
+  if (DISTRACTING_MATCH.some(x => s.includes(x))) return "distracting";
+  return "neutral";
+}
+
+async function addManualActivity(siteName, minutes) {
+  const key = localDayKey();
+  const day = normalizeDay(state.days[key] || {});
+
+
+//
+  const cleanName = String(siteName || "").trim();
+  const mins = Math.max(1, Number(minutes) || 1);
+  const ms = mins * 60000;
+  const category = guessCategoryFromName(cleanName);
+  const now = Date.now();
+
+  day.totalMs += ms;
+  day.byCategory[category] += ms;
+
+  if (!day.bySite[cleanName]) {
+    day.bySite[cleanName] = {
+      domain: cleanName,
+      title: cleanName,
+
+      url: "",
+      ms: 0,
+      count: 0,
+      manual: true
+    };
+  }
+
+  day.bySite[cleanName].ms += ms;
+  day.bySite[cleanName].count += 1;
+
+  day.segments.push({
+    domain: cleanName,
+    title: cleanName,
+    url: "",
+    category,
+    startedAt: now - ms,
+    endedAt: now,
+    ms,
+    manual: true
+
+
+  });
+
+  day.lastUpdated = now;
+  state.days[key] = day;
+
+  // switch the dashboard to dayjust edited
+  selectedKey = key;
+  compareKey = pickOtherKey(selectedKey);
+
+  await writeSavedState(state);
+  renderAll();
 }
 
 function csvEscape(value) {
@@ -527,11 +724,13 @@ function segmentRowsForReport(key, report) {
     key,
     idx + 1,
     new Date(seg.startedAt).toISOString(),
+
     new Date(seg.endedAt).toISOString(),
     seg.domain,
     seg.title,
     seg.category,
     Math.round(seg.ms / 1000)
+
   ]);
 }
 
@@ -551,6 +750,8 @@ function exportSelectedJson() {
   const report = reportForKey(selectedKey);
   const payload = {
     reportKey: selectedKey,
+
+
     label: dayLabel(selectedKey),
     generatedAt: new Date().toISOString(),
     summary: summarize(report),
@@ -560,6 +761,8 @@ function exportSelectedJson() {
 }
 
 function exportSelectedCsv() {
+
+
   const report = reportForKey(selectedKey);
   const rows = [
     ["reportKey", "segmentIndex", "start", "end", "domain", "title", "category", "seconds"],
@@ -571,6 +774,8 @@ function exportSelectedCsv() {
 }
 
 function exportAllJson() {
+
+//
   const payload = {
     generatedAt: new Date().toISOString(),
     state
@@ -591,9 +796,11 @@ function exportAllCsv() {
   download(`tabber-all.csv`, csv, "text/csv");
 }
 
+
+
 async function loadState() {
-  const data = await chrome.storage.local.get(STORAGE_KEY);
-  state = normalizeState(data[STORAGE_KEY]);
+  const saved = await readSavedState();
+  state = normalizeState(saved);
   renderAll();
 }
 
@@ -602,12 +809,16 @@ function toggleGhost(open) {
   els.ghostToggle.setAttribute("aria-expanded", open ? "true" : "false");
 }
 
-/* Events */
+
+
+
 els.reportSelect.addEventListener("change", (e) => {
   selectedKey = e.target.value;
   if (compareKey === selectedKey) compareKey = pickOtherKey(selectedKey);
   renderAll();
 });
+
+
 
 els.compareSelect.addEventListener("change", (e) => {
   compareKey = e.target.value;
@@ -615,8 +826,11 @@ els.compareSelect.addEventListener("change", (e) => {
   renderAll();
 });
 
+
+
 els.reportList.addEventListener("click", (e) => {
   const loadBtn = e.target.closest("[data-load]");
+
   const compareBtn = e.target.closest("[data-compare]");
 
   if (loadBtn) {
@@ -636,8 +850,12 @@ els.exportGrid.addEventListener("click", (e) => {
   const btn = e.target.closest("[data-export]");
   if (!btn) return;
 
+
+
   const type = btn.dataset.export;
+
   if (type === "selected-json") exportSelectedJson();
+
   if (type === "selected-csv") exportSelectedCsv();
   if (type === "all-json") exportAllJson();
   if (type === "all-csv") exportAllCsv();
@@ -650,23 +868,43 @@ els.ghostToggle.addEventListener("click", () => {
 
 els.ghostClose.addEventListener("click", () => toggleGhost(false));
 
-chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "local" && changes[STORAGE_KEY]) {
-    state = normalizeState(changes[STORAGE_KEY].newValue);
-    renderAll();
-  }
-});
+if (els.manualForm) {
+  els.manualForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-/* Cursor-follow ghost */
+    const site = els.manualSite.value.trim();
+    const minutes = Number(els.manualMinutes.value);
+
+    if (!site) return;
+
+    await addManualActivity(site, minutes);
+
+    els.manualSite.value = "";
+    els.manualMinutes.value = 15;
+    els.manualSite.focus();
+  });
+}
+
+if (HAS_CHROME_STORAGE && chrome.storage.onChanged) {
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === "local" && changes[STORAGE_KEY]) {
+      state = normalizeState(changes[STORAGE_KEY].newValue);
+      renderAll();
+    }
+  });
+}
+
+/*follow ghost */
 let mouseX = -9999;
 let mouseY = -9999;
+
 let ghostX = -9999;
 let ghostY = -9999;
 let ghostVisible = false;
 let ghostFrame = null;
 
 function moveCursorGhost() {
-  if (!ghostVisible) return;
+  if (!ghostVisible || !els.cursorGhost) return;
 
   ghostX += (mouseX - ghostX) * 0.06;
   ghostY += (mouseY - ghostY) * 0.06;
@@ -694,6 +932,8 @@ function showCursorGhost(x, y) {
 function hideCursorGhost() {
   ghostVisible = false;
   cancelAnimationFrame(ghostFrame);
+
+  if (!els.cursorGhost) return;
   els.cursorGhost.style.opacity = "0";
   els.cursorGhost.style.transform = "translate(-9999px, -9999px)";
 }
@@ -705,6 +945,8 @@ document.addEventListener("mousemove", (e) => {
 document.addEventListener("mouseleave", hideCursorGhost);
 window.addEventListener("blur", hideCursorGhost);
 
-/* Init */
+
+
+
 loadState();
 setInterval(renderAll, 1000);

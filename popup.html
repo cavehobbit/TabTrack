@@ -1,12 +1,18 @@
 <!doctype html>
 <html>
 <head>
-  <link rel="icon" type="image/png" href="ghost1.png">
-  <link rel="apple-touch-icon" href="ghost1.png">
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Tabber</title>
+  <!-- icn ghost -->
+  <link rel="icon" type="image/png" href="ghost1.png">
+  <link rel="apple-touch-icon" href="ghost1.png">
+
   <style>
+   
+
+
+
     :root{
       --bg:#fff;
       --panel:#fff;
@@ -19,7 +25,7 @@
 
     *{
       box-sizing:border-box;
-      border-radius:0 !important;
+      border-radius:0 !important; 
     }
 
     html, body{
@@ -32,13 +38,14 @@
 
     body{
       display:flex;
-      justify-content:center;
+      justify-content:center; 
       overflow-x:hidden;
       background:
         linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px),
         linear-gradient(90deg, rgba(0,0,0,.05) 1px, transparent 1px),
         #fff;
       background-size: 34px 34px;
+      padding-bottom: 120px; 
     }
 
     ::selection{
@@ -47,13 +54,16 @@
     }
 
     .app{
+
+
       width:min(1180px, calc(100vw - 24px));
       margin:12px auto 24px;
       display:grid;
       gap:12px;
-      padding-bottom:96px;
       position:relative;
     }
+
+
 
     .panel{
       position:relative;
@@ -69,6 +79,8 @@
       position:absolute;
       inset:0;
       pointer-events:none;
+
+
       opacity:.04;
       background:
         linear-gradient(135deg, transparent 0 49%, #000 49% 51%, transparent 51% 100%);
@@ -98,9 +110,12 @@
       color:var(--muted);
     }
 
+
+
     .chip{
       border:2px solid #000;
       background:#fff;
+
       color:#000;
       padding:8px 10px;
       box-shadow: var(--shadow-sm);
@@ -126,6 +141,7 @@
       letter-spacing:.14em;
     }
 
+
     .section-head p{
       margin:4px 0 0;
       font-size:12px;
@@ -133,7 +149,9 @@
       line-height:1.45;
     }
 
-    select, button{
+
+    /*manual inpt*/
+    select, input, button{
       font:inherit;
       color:inherit;
     }
@@ -148,6 +166,8 @@
       min-width: 180px;
       max-width: 100%;
     }
+
+
 
     .btn{
       height:36px;
@@ -176,6 +196,8 @@
       box-shadow:none;
     }
 
+
+
     .live-grid{
       display:grid;
       grid-template-columns: 1.4fr .8fr;
@@ -202,6 +224,7 @@
     .live-title{
       font-size:22px;
       font-weight:900;
+
       letter-spacing:-0.07em;
       text-transform:uppercase;
       line-height:1.05;
@@ -222,9 +245,13 @@
       white-space:nowrap;
     }
 
+
+
+    
     .live-elapsed{
       font-size:32px;
       font-weight:900;
+
       letter-spacing:-0.08em;
       line-height:1;
       margin-top:8px;
@@ -238,6 +265,7 @@
 
     .stat{
       border:2px solid #000;
+
       box-shadow: var(--shadow-sm);
       background:#fff;
       color:#000;
@@ -262,6 +290,8 @@
     }
 
     .stat .value{
+
+
       font-size:30px;
       font-weight:900;
       line-height:1;
@@ -291,6 +321,7 @@
     .ghost-feed::-webkit-scrollbar-thumb{
       background:#000;
       border:2px solid #fff;
+
     }
 
     .timeline-scroll::-webkit-scrollbar-track,
@@ -307,6 +338,7 @@
       height:74px;
     }
 
+
     .segment{
       min-width:84px;
       border:2px solid #000;
@@ -321,6 +353,7 @@
     .segment strong,
     .segment small{
       white-space:nowrap;
+
       overflow:hidden;
       text-overflow:ellipsis;
       text-transform:uppercase;
@@ -334,6 +367,8 @@
     .segment small{
       font-size:11px;
     }
+
+
 
     .segment.productive{
       background:#fff;
@@ -360,6 +395,8 @@
     .legend span{
       border:2px solid #000;
       padding:6px 8px;
+
+
       font-size:11px;
       text-transform:uppercase;
       letter-spacing:.12em;
@@ -367,12 +404,16 @@
       color:#000;
     }
 
+
+
+
     .legend .inverse{
       background:#000;
       color:#fff;
     }
 
     .legend .stripe{
+
       background: repeating-linear-gradient(45deg, #dadada 0 8px, #f7f7f7 8px 16px);
     }
 
@@ -380,9 +421,14 @@
       display:grid;
       gap:12px;
       grid-template-columns: repeat(4, minmax(0, 1fr));
+
     }
 
+
+
     .diff{
+
+
       border:2px solid #000;
       background:#fff;
       color:#000;
@@ -444,6 +490,8 @@
       color:#fff;
     }
 
+
+
     .item .meta{
       min-width:0;
       flex:1 1 auto;
@@ -460,6 +508,8 @@
     }
 
     .item .meta span{
+
+
       display:block;
       margin-top:4px;
       text-transform:uppercase;
@@ -470,12 +520,14 @@
     }
 
     .actions{
+
       display:flex;
       gap:8px;
       flex:0 0 auto;
     }
 
     .export-grid{
+
       display:grid;
       gap:8px;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -483,6 +535,7 @@
 
     .empty{
       border:2px dashed #000;
+
       padding:14px;
       text-align:center;
       color:var(--muted);
@@ -496,13 +549,35 @@
     .footer{
       font-size:11px;
       text-transform:uppercase;
+
       letter-spacing:.12em;
       color:#444;
       text-align:center;
       padding:2px 0 0;
     }
 
-    /* Ghost widget */
+
+
+
+    .manual-form{
+      display:grid;
+      grid-template-columns: 1.4fr .6fr auto;
+      gap:10px;
+    }
+
+    .manual-form input{
+      height:36px;
+      border:2px solid #000;
+      background:#fff;
+      color:#000;
+      padding:0 10px;
+      box-shadow: var(--shadow-sm);
+    }
+    .manual-form input::placeholder {
+      color: var(--muted);
+    }
+
+    /* ghots */
     .ghost-widget{
       position:fixed;
       right:16px;
@@ -511,6 +586,8 @@
     }
 
     .ghost-toggle{
+
+
       width:58px;
       height:58px;
       padding:0;
@@ -525,6 +602,7 @@
       overflow:hidden;
       clip-path: circle(50% at 50% 50%);
       aspect-ratio: 1 / 1;
+
     }
 
     .ghost-toggle img{
@@ -533,15 +611,21 @@
       object-fit:contain;
       display:block;
       pointer-events:none;
+
+
     }
 
+
+
     .ghost-panel{
+
       position:absolute;
       right:0;
       bottom:70px;
       width:280px;
       height:420px;
       border:2px solid #000;
+
       background:#fff;
       box-shadow: var(--shadow);
       display:none;
@@ -558,6 +642,8 @@
       background:#000;
       color:#fff;
       display:flex;
+
+
       justify-content:space-between;
       align-items:center;
       gap:10px;
@@ -581,6 +667,8 @@
 
     .ghost-body{
       padding:12px;
+
+
       display:grid;
       gap:10px;
       flex:1 1 auto;
@@ -599,6 +687,9 @@
       text-transform:uppercase;
       letter-spacing:.06em;
     }
+
+
+
 
     .ghost-feed{
       display:grid;
@@ -632,6 +723,8 @@
       border:2px dashed #000;
       padding:12px;
       text-transform:uppercase;
+
+
       letter-spacing:.08em;
       color:var(--muted);
       font-size:12px;
@@ -640,7 +733,10 @@
       background:#fff;
     }
 
-    /* Cursor-follow ghost */
+  
+
+
+
     .cursor-ghost{
       position:fixed;
       left:0;
@@ -653,7 +749,54 @@
       transform: translate(-9999px, -9999px);
       transition: opacity .15s ease;
       will-change: transform;
+
+
     }
+
+   
+
+
+    .github-link{
+      position:fixed;
+      left:16px;
+      bottom:16px;
+      width:58px;
+      height:58px;
+      border:2px solid #000;
+      background:#fff;
+
+
+      color:#000;
+      box-shadow: 6px 6px 0 #000;
+      border-radius:50% !important;
+      display:grid;
+      place-items:center;
+      text-decoration:none;
+      z-index:10000;
+      font-weight:900;
+      font-size:11px;
+      letter-spacing:.12em;
+
+      text-transform:uppercase;
+      transition: transform .14s ease, background .14s ease, color .14s ease, box-shadow .14s ease;
+    }
+
+    .github-link:hover{
+      transform: translate(1px, 1px);
+      box-shadow: 4px 4px 0 #000;
+      background:#000;
+      color:#fff;
+    }
+
+    .github-link:active{
+      transform: translate(3px, 3px);
+      box-shadow: 2px 2px 0 #000;
+
+
+    }
+
+ 
+
 
     @media (max-width: 920px){
       .stats{
@@ -679,6 +822,8 @@
         align-items:stretch;
       }
 
+
+
       .header > *{
         width:100%;
       }
@@ -695,10 +840,15 @@
       .actions{
         justify-content:flex-end;
       }
+
       .stats,
       .compare-grid,
       .export-grid{
         grid-template-columns:1fr;
+      }
+
+      .manual-form{
+        grid-template-columns: 1fr;
       }
 
       .ghost-widget{
@@ -706,13 +856,25 @@
         bottom:10px;
       }
 
+      .github-link{
+        left:10px;
+        bottom:10px;
+      }
+
       .ghost-panel{
         width:min(92vw, 280px);
+
+
       }
     }
   </style>
 </head>
 <body>
+
+
+
+
+
   <div class="app">
     <header class="panel header">
       <div class="brand">
@@ -735,6 +897,8 @@
         </div>
       </div>
 
+
+
       <div class="live-grid">
         <div>
           <div class="mini">current tab</div>
@@ -748,6 +912,24 @@
         </div>
       </div>
     </section>
+
+    <!-- for widout install -->
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <h2>Manual activity</h2>
+          <p>Add a site and duration without live tracking. Ideal for non-browser work.</p>
+        </div>
+      </div>
+
+      <form id="manualForm" class="manual-form">
+        <input id="manualSite" type="text" placeholder="Site name, e.g. Notion, Code Editor" required />
+        <input id="manualMinutes" type="number" min="1" value="15" required />
+        <button class="btn" type="submit">Add</button>
+      </form>
+    </section>
+
+
 
     <section class="stats" id="statsGrid"></section>
 
@@ -766,6 +948,8 @@
     </section>
 
     <section class="panel">
+
+
       <div class="section-head">
         <div>
           <h2>Compare days</h2>
@@ -785,6 +969,8 @@
         </div>
         <div class="chip" id="reportCount">0 reports</div>
       </div>
+
+      <!--exportt-->
 
       <div class="report-list" id="reportList"></div>
     </section>
@@ -808,6 +994,10 @@
     <div class="footer">Everything stays in your browser via localStorage.</div>
   </div>
 
+ 
+
+
+
   <div class="ghost-widget">
     <button class="ghost-toggle" id="ghostToggle" aria-expanded="false" title="Ghost reminders">
       <img src="ghost.png" alt="" aria-hidden="true">
@@ -820,14 +1010,27 @@
       </div>
       <div class="ghost-body">
         <div class="ghost-note" id="ghostNote">
-          I’ll nudge you when distraction climbs too high.
+          I'll nudge you when distraction climbs too high.
         </div>
         <div class="ghost-feed" id="ghostFeed"></div>
       </div>
     </div>
   </div>
 
+  <!-- ghost n github -->
   <img id="cursorGhost" class="cursor-ghost" src="ghost1.png" alt="" aria-hidden="true">
+
+
+
+  <a
+    class="github-link"
+    href="https://github.com/cavehobbit/TabTrack"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="GitHub repository"
+  >
+    GH
+  </a>
 
   <script src="popup.js"></script>
 </body>

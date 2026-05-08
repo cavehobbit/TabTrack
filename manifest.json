@@ -4,10 +4,14 @@
   "version": "4.0.0",
   "description": "Track active tab time, switching patterns, and distraction reminders.",
   "permissions": ["storage", "tabs", "idle", "alarms", "notifications"],
+
+
   "background": {
     "service_worker": "background.js"
   },
   "action": {
+
+    
     "default_title": "Tabber",
     "default_icon": {
       "16": "ghost1.png",

@@ -1,6 +1,8 @@
 const STORAGE_KEY = "tabber_state_v4";
 const HEARTBEAT = "tabber-heartbeat";
 
+
+
 const PRODUCTIVE = [
   "github.com",
   "docs.google.com",
@@ -11,8 +13,10 @@ const PRODUCTIVE = [
   "developer.mozilla.org",
   "wikipedia.org",
   "notion.so",
+  "hackatime.hackclub.com",
   "chatgpt.com",
   "replit.com",
+  "slack.com",
   "codepen.io",
   "figma.com",
   "leetcode.com",
@@ -21,6 +25,8 @@ const PRODUCTIVE = [
   "khanacademy.org"
 ];
 
+
+
 const DISTRACTING = [
   "youtube.com",
   "tiktok.com",
@@ -28,15 +34,18 @@ const DISTRACTING = [
   "facebook.com",
   "reddit.com",
   "x.com",
+  "twitter.com",
   "netflix.com",
   "twitch.tv",
   "discord.com",
   "snapchat.com",
   "pinterest.com",
   "threads.net",
-  "9gag.com",
-  "imgur.com"
+  "imgur.com",
+  "9gag.com"
 ];
+
+
 
 const DISTRACTION_THRESHOLDS_MIN = [10, 20, 30, 45, 60, 90];
 const REMINDER_COOLDOWN_MS = 12 * 60 * 1000;
@@ -50,6 +59,10 @@ const GHOST_ICON = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
   <path d="M48 79c6 7 26 7 32 0" stroke="white" stroke-width="6" fill="none" stroke-linecap="round"/>
 </svg>
 `)}`;
+
+
+
+
 
 let state = {
   running: null,
@@ -65,6 +78,8 @@ let state = {
 
 let loaded = false;
 
+//datentime
+
 function localDayKey(ts = Date.now()) {
   const d = new Date(ts);
   const y = d.getFullYear();
@@ -73,9 +88,13 @@ function localDayKey(ts = Date.now()) {
   return `${y}-${m}-${day}`;
 }
 
+
+
 function dayStart(key) {
   const [y, m, d] = key.split("-").map(Number);
   return new Date(y, m - 1, d).getTime();
+
+
 }
 
 function nextMidnightFromKey(key) {
@@ -127,6 +146,8 @@ function normalizeDay(day) {
     segments: Array.isArray(safe.segments) ? safe.segments : [],
     lastUpdated: Number(safe.lastUpdated) || Date.now()
   };
+
+
 }
 
 function normalizeRunning(r) {
@@ -138,16 +159,22 @@ function normalizeRunning(r) {
 
   return {
     tabId: Number(r.tabId),
+
     windowId: Number(r.windowId),
     url: String(r.url || ""),
     title: String(r.title || r.url || ""),
     domain: String(r.domain || domainFromUrl(r.url || "")),
+
+
     category: ["productive", "neutral", "distracting"].includes(r.category) ? r.category : "neutral",
     startedAt,
     flushedAt,
     flushedMs
   };
 }
+
+
+
 
 function normalizeGhost(g) {
   const safe = g && typeof g === "object" ? g : {};
@@ -159,6 +186,8 @@ function normalizeGhost(g) {
     messages: Array.isArray(safe.messages) ? safe.messages.slice(0, 20) : []
   };
 }
+
+
 
 function normalizeState(raw) {
   const src = raw && typeof raw === "object" ? raw : {};
@@ -175,6 +204,7 @@ function normalizeState(raw) {
 
   return out;
 }
+
 
 async function hydrate() {
   if (loaded) return;
@@ -200,6 +230,7 @@ function addChunk(seg, start, end) {
   let cursor = start;
   while (cursor < end) {
     const key = localDayKey(cursor);
+
     const boundary = nextMidnightFromKey(key);
     const chunkEnd = Math.min(end, boundary);
     const chunkMs = chunkEnd - cursor;
@@ -257,6 +288,8 @@ function finalizeRunning(now = Date.now()) {
   state.running = null;
 }
 
+
+//focus by dy
 function focusScore(day) {
   const p = day?.byCategory?.productive || 0;
   const n = day?.byCategory?.neutral || 0;
@@ -294,6 +327,8 @@ function liveSnapshot(key, now = Date.now()) {
 
       if (!base.bySite[state.running.domain]) {
         base.bySite[state.running.domain] = {
+
+
           domain: state.running.domain,
           title: state.running.title,
           url: state.running.url,
@@ -330,6 +365,9 @@ function resetGhostDayIfNeeded(today) {
   }
 }
 
+
+//ghostreminders
+
 async function maybeNudge(now = Date.now()) {
   const today = localDayKey(now);
   resetGhostDayIfNeeded(today);
@@ -348,11 +386,14 @@ async function maybeNudge(now = Date.now()) {
 
   if (nextMilestone) {
     state.ghost.lastMilestoneMin = nextMilestone;
+
     message = randomFrom([
-      `Boo. You've crossed ${nextMilestone} minutes of distraction today. Try one clean focus block.`,
+      `Boo. You've crossed ${nextMilestone} minutes of distraction today. Try focusing NOW.`,
       `Ghost check: ${nextMilestone} minutes distracted. Close the noisy tab and return to one task.`,
-      `Spooky reminder: distraction is stacking up. Time to pick a single browser tab and commit.`
+      `Spooky reminder: distraction is stacking up. Time to pick a single browser tab and chop chop.`
     ]);
+
+
   } else if (
     totalMin >= 20 &&
     focus < 45 &&
@@ -362,7 +403,7 @@ async function maybeNudge(now = Date.now()) {
     type = "focus";
     message = randomFrom([
       `Ghost says your focus score is slipping. Lock onto one tab for 10 minutes.`,
-      `Boo... your browsing is getting scattered. Cut the switches and stay on one goal.`,
+      `Boo... did i scare you? you getting distracted scares me MORE lock in.`,
       `Reminder from the ghost: the distraction ratio is high. Pick the important tab now.`
     ]);
   }
@@ -370,6 +411,9 @@ async function maybeNudge(now = Date.now()) {
   if (!message) return;
 
   state.ghost.lastSentAt = now;
+
+
+
   pushGhostMessage(message, type);
   await save();
 
@@ -386,7 +430,12 @@ async function maybeNudge(now = Date.now()) {
   }
 }
 
+
+
+
+
 async function pauseTracking() {
+
   await hydrate();
   finalizeRunning();
   await maybeNudge();
@@ -394,7 +443,11 @@ async function pauseTracking() {
 }
 
 async function startOrSwitch(tab, { forceTick = false } = {}) {
+
+
   await hydrate();
+
+
 
   if (!tab || !isTrackable(tab.url)) {
     await pauseTracking();
@@ -403,12 +456,16 @@ async function startOrSwitch(tab, { forceTick = false } = {}) {
 
   const now = Date.now();
   const next = {
+
+
     tabId: tab.id,
     windowId: tab.windowId,
     url: tab.url,
     title: tab.title || tab.url,
     domain: domainFromUrl(tab.url),
+
     category: categoryForDomain(domainFromUrl(tab.url)),
+
     startedAt: now,
     flushedAt: now,
     flushedMs: 0
@@ -421,6 +478,7 @@ async function startOrSwitch(tab, { forceTick = false } = {}) {
     state.running.title = next.title;
     state.running.domain = next.domain;
     state.running.category = next.category;
+
     state.running.windowId = next.windowId;
 
     await save();
@@ -433,10 +491,16 @@ async function startOrSwitch(tab, { forceTick = false } = {}) {
   }
 
   state.running = next;
+
+
+
   await save();
 }
 
+
+
 async function syncActiveTab(forceTick = false) {
+
   await hydrate();
 
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
@@ -448,16 +512,19 @@ async function syncActiveTab(forceTick = false) {
   }
 }
 
+//hbeat
 async function ensureHeartbeat() {
   chrome.alarms.create(HEARTBEAT, { periodInMinutes: 1 });
 }
 
 async function openDashboard() {
+
   const url = chrome.runtime.getURL("popup.html");
   const tabs = await chrome.tabs.query({ url }).catch(() => []);
 
   if (tabs && tabs.length) {
     await chrome.tabs.update(tabs[0].id, { active: true });
+
     await chrome.windows.update(tabs[0].windowId, { focused: true });
   } else {
     await chrome.tabs.create({ url });
@@ -471,12 +538,15 @@ chrome.idle.setDetectionInterval(15);
 chrome.runtime.onInstalled.addListener(async () => {
   await hydrate();
   await ensureHeartbeat();
+
   state.running = null;
   await save();
   await syncActiveTab();
 });
 
 chrome.runtime.onStartup.addListener(async () => {
+
+
   await hydrate();
   await ensureHeartbeat();
   state.running = null;
@@ -485,6 +555,7 @@ chrome.runtime.onStartup.addListener(async () => {
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
+
   if (alarm.name === HEARTBEAT) {
     await syncActiveTab(true);
   }
@@ -499,15 +570,19 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+
   await hydrate();
 
   if (changeInfo.url) {
     if (state.running && state.running.tabId === tabId) {
       flushRunning(Date.now());
       state.running.url = tab.url || state.running.url;
+
+      
       state.running.title = tab.title || state.running.title;
       state.running.domain = domainFromUrl(state.running.url);
       state.running.category = categoryForDomain(state.running.domain);
+
       await save();
       await maybeNudge();
       return;
@@ -521,6 +596,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   }
 
   if (state.running && state.running.tabId === tabId && changeInfo.title) {
+
     state.running.title = tab.title || state.running.title;
     await save();
   }
@@ -534,17 +610,29 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 });
 
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
+
+
   if (windowId === chrome.windows.WINDOW_ID_NONE) {
     await pauseTracking();
+
     return;
   }
   await syncActiveTab();
 });
 
 chrome.idle.onStateChanged.addListener(async (newState) => {
+
   if (newState === "active") {
     await syncActiveTab();
   } else {
     await pauseTracking();
+  }
+});
+
+
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes[STORAGE_KEY]) {
+    state = normalizeState(changes[STORAGE_KEY].newValue);
   }
 });
