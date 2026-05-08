@@ -1,15 +1,24 @@
-const STORAGE_KEY = "tabber_state_v3";
+const STORAGE_KEY = "tabber_state_v4";
 const HEARTBEAT = "tabber-heartbeat";
 
 const PRODUCTIVE = [
   "github.com",
   "docs.google.com",
+  "drive.google.com",
+  "calendar.google.com",
+  "mail.google.com",
   "stackoverflow.com",
+  "developer.mozilla.org",
+  "wikipedia.org",
   "notion.so",
   "chatgpt.com",
   "replit.com",
   "codepen.io",
-  "figma.com"
+  "figma.com",
+  "leetcode.com",
+  "freecodecamp.org",
+  "coursera.org",
+  "khanacademy.org"
 ];
 
 const DISTRACTING = [
@@ -19,7 +28,14 @@ const DISTRACTING = [
   "facebook.com",
   "reddit.com",
   "x.com",
-  "netflix.com"
+  "netflix.com",
+  "twitch.tv",
+  "discord.com",
+  "snapchat.com",
+  "pinterest.com",
+  "threads.net",
+  "9gag.com",
+  "imgur.com"
 ];
 
 const DISTRACTION_THRESHOLDS_MIN = [10, 20, 30, 45, 60, 90];
@@ -146,7 +162,6 @@ function normalizeGhost(g) {
 
 function normalizeState(raw) {
   const src = raw && typeof raw === "object" ? raw : {};
-
   const out = {
     running: normalizeRunning(src.running),
     days: {},
@@ -436,6 +451,20 @@ async function syncActiveTab(forceTick = false) {
 async function ensureHeartbeat() {
   chrome.alarms.create(HEARTBEAT, { periodInMinutes: 1 });
 }
+
+async function openDashboard() {
+  const url = chrome.runtime.getURL("popup.html");
+  const tabs = await chrome.tabs.query({ url }).catch(() => []);
+
+  if (tabs && tabs.length) {
+    await chrome.tabs.update(tabs[0].id, { active: true });
+    await chrome.windows.update(tabs[0].windowId, { focused: true });
+  } else {
+    await chrome.tabs.create({ url });
+  }
+}
+
+chrome.action.onClicked.addListener(openDashboard);
 
 chrome.idle.setDetectionInterval(15);
 

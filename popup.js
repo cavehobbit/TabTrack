@@ -1,4 +1,4 @@
-const STORAGE_KEY = "tabber_state_v3";
+const STORAGE_KEY = "tabber_state_v4";
 
 let state = {
   running: null,
@@ -33,7 +33,8 @@ const els = {
   ghostClose: document.getElementById("ghostClose"),
   ghostPanel: document.getElementById("ghostPanel"),
   ghostFeed: document.getElementById("ghostFeed"),
-  ghostNote: document.getElementById("ghostNote")
+  ghostNote: document.getElementById("ghostNote"),
+  cursorGhost: document.getElementById("cursorGhost")
 };
 
 function localDayKey(ts = Date.now()) {
@@ -61,13 +62,14 @@ function clone(v) {
 
 function formatDuration(ms) {
   ms = Math.max(0, ms || 0);
-  const s = Math.round(ms / 1000);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  if (h) return m ? `${h}h ${m}m` : `${h}h`;
-  if (m) return `${m}m`;
-  return `${sec}s`;
+  const totalSeconds = Math.floor(ms / 1000);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+
+  if (h) return `${h}h ${m}m ${s}s`;
+  if (m) return `${m}m ${s}s`;
+  return `${s}s`;
 }
 
 function formatSignedDuration(ms) {
@@ -600,6 +602,7 @@ function toggleGhost(open) {
   els.ghostToggle.setAttribute("aria-expanded", open ? "true" : "false");
 }
 
+/* Events */
 els.reportSelect.addEventListener("change", (e) => {
   selectedKey = e.target.value;
   if (compareKey === selectedKey) compareKey = pickOtherKey(selectedKey);
@@ -654,5 +657,54 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
+/* Cursor-follow ghost */
+let mouseX = -9999;
+let mouseY = -9999;
+let ghostX = -9999;
+let ghostY = -9999;
+let ghostVisible = false;
+let ghostFrame = null;
+
+function moveCursorGhost() {
+  if (!ghostVisible) return;
+
+  ghostX += (mouseX - ghostX) * 0.06;
+  ghostY += (mouseY - ghostY) * 0.06;
+
+  els.cursorGhost.style.opacity = "1";
+  els.cursorGhost.style.transform = `translate(${ghostX + 14}px, ${ghostY + 14}px)`;
+
+  ghostFrame = requestAnimationFrame(moveCursorGhost);
+}
+
+function showCursorGhost(x, y) {
+  mouseX = x;
+  mouseY = y;
+
+  if (!ghostVisible) {
+    ghostVisible = true;
+    ghostX = x;
+    ghostY = y;
+    els.cursorGhost.style.opacity = "1";
+    cancelAnimationFrame(ghostFrame);
+    moveCursorGhost();
+  }
+}
+
+function hideCursorGhost() {
+  ghostVisible = false;
+  cancelAnimationFrame(ghostFrame);
+  els.cursorGhost.style.opacity = "0";
+  els.cursorGhost.style.transform = "translate(-9999px, -9999px)";
+}
+
+document.addEventListener("mousemove", (e) => {
+  showCursorGhost(e.clientX, e.clientY);
+});
+
+document.addEventListener("mouseleave", hideCursorGhost);
+window.addEventListener("blur", hideCursorGhost);
+
+/* Init */
 loadState();
 setInterval(renderAll, 1000);

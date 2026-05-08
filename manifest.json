@@ -1,14 +1,25 @@
 {
   "manifest_version": 3,
   "name": "Tabber",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "Track active tab time, switching patterns, and distraction reminders.",
   "permissions": ["storage", "tabs", "idle", "alarms", "notifications"],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html",
-    "default_title": "Tabber"
+    "default_title": "Tabber",
+    "default_icon": {
+      "16": "ghost1.png",
+      "32": "ghost1.png",
+      "48": "ghost1.png",
+      "128": "ghost1.png"
+    }
+  },
+  "icons": {
+    "16": "ghost1.png",
+    "32": "ghost1.png",
+    "48": "ghost1.png",
+    "128": "ghost1.png"
   }
 }

@@ -1,16 +1,18 @@
 <!doctype html>
 <html>
 <head>
+  <link rel="icon" type="image/png" href="ghost1.png">
+  <link rel="apple-touch-icon" href="ghost1.png">
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Tabber</title>
   <style>
     :root{
-      --bg:#f3f3f3;
+      --bg:#fff;
       --panel:#fff;
       --ink:#000;
       --muted:#444;
-      --soft:#e7e7e7;
+      --soft:#efefef;
       --shadow: 6px 6px 0 #000;
       --shadow-sm: 3px 3px 0 #000;
     }
@@ -20,19 +22,23 @@
       border-radius:0 !important;
     }
 
-    body{
+    html, body{
       margin:0;
-      min-height:100vh;
-      font-family: Arial, Helvetica, sans-serif;
+      min-height:100%;
+      background:var(--bg);
       color:var(--ink);
-      background:
-        linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,0,0,.05) 1px, transparent 1px),
-        var(--bg);
-      background-size: 34px 34px;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body{
       display:flex;
       justify-content:center;
       overflow-x:hidden;
+      background:
+        linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,.05) 1px, transparent 1px),
+        #fff;
+      background-size: 34px 34px;
     }
 
     ::selection{
@@ -41,11 +47,12 @@
     }
 
     .app{
-      width:min(980px, calc(100vw - 16px));
-      margin:12px auto 16px;
+      width:min(1180px, calc(100vw - 24px));
+      margin:12px auto 24px;
       display:grid;
       gap:12px;
-      padding-bottom: 10px;
+      padding-bottom:96px;
+      position:relative;
     }
 
     .panel{
@@ -77,7 +84,7 @@
 
     .brand h1{
       margin:0;
-      font-size:32px;
+      font-size:34px;
       line-height:1;
       letter-spacing:-0.08em;
       text-transform:uppercase;
@@ -94,6 +101,7 @@
     .chip{
       border:2px solid #000;
       background:#fff;
+      color:#000;
       padding:8px 10px;
       box-shadow: var(--shadow-sm);
       text-transform:uppercase;
@@ -134,6 +142,7 @@
       height:36px;
       border:2px solid #000;
       background:#fff;
+      color:#000;
       padding:0 10px;
       box-shadow: var(--shadow-sm);
       min-width: 180px;
@@ -144,6 +153,7 @@
       height:36px;
       border:2px solid #000;
       background:#fff;
+      color:#000;
       padding:0 10px;
       box-shadow: var(--shadow-sm);
       cursor:pointer;
@@ -230,6 +240,7 @@
       border:2px solid #000;
       box-shadow: var(--shadow-sm);
       background:#fff;
+      color:#000;
       padding:12px;
       min-height:92px;
       display:flex;
@@ -353,6 +364,7 @@
       text-transform:uppercase;
       letter-spacing:.12em;
       background:#fff;
+      color:#000;
     }
 
     .legend .inverse{
@@ -373,6 +385,7 @@
     .diff{
       border:2px solid #000;
       background:#fff;
+      color:#000;
       box-shadow: var(--shadow-sm);
       padding:12px;
       min-height:96px;
@@ -417,6 +430,7 @@
     .item{
       border:2px solid #000;
       background:#fff;
+      color:#000;
       box-shadow: 4px 4px 0 #000;
       padding:10px;
       display:flex;
@@ -488,7 +502,7 @@
       padding:2px 0 0;
     }
 
-    /* Ghost chatbox */
+    /* Ghost widget */
     .ghost-widget{
       position:fixed;
       right:16px;
@@ -499,16 +513,26 @@
     .ghost-toggle{
       width:58px;
       height:58px;
+      padding:0;
       border:2px solid #000;
-      background:#000;
-      color:#fff;
+      background:#fff;
+      color:#000;
       box-shadow: var(--shadow);
       cursor:pointer;
-      font-size:24px;
-      line-height:1;
       display:grid;
       place-items:center;
       border-radius:50% !important;
+      overflow:hidden;
+      clip-path: circle(50% at 50% 50%);
+      aspect-ratio: 1 / 1;
+    }
+
+    .ghost-toggle img{
+      width:34px;
+      height:34px;
+      object-fit:contain;
+      display:block;
+      pointer-events:none;
     }
 
     .ghost-panel{
@@ -561,11 +585,13 @@
       gap:10px;
       flex:1 1 auto;
       overflow:auto;
+      background:#fff;
     }
 
     .ghost-note{
       border:2px solid #000;
-      background:#fff;
+      background:#f7f7f7;
+      color:#000;
       box-shadow: var(--shadow-sm);
       padding:10px;
       font-size:12px;
@@ -582,6 +608,7 @@
     .ghost-bubble{
       border:2px solid #000;
       background:#fff;
+      color:#000;
       box-shadow: 3px 3px 0 #000;
       padding:10px;
       font-size:12px;
@@ -610,6 +637,22 @@
       font-size:12px;
       line-height:1.5;
       text-align:center;
+      background:#fff;
+    }
+
+    /* Cursor-follow ghost */
+    .cursor-ghost{
+      position:fixed;
+      left:0;
+      top:0;
+      width:38px;
+      height:38px;
+      pointer-events:none;
+      z-index:9999;
+      opacity:0;
+      transform: translate(-9999px, -9999px);
+      transition: opacity .15s ease;
+      will-change: transform;
     }
 
     @media (max-width: 920px){
@@ -652,7 +695,6 @@
       .actions{
         justify-content:flex-end;
       }
-
       .stats,
       .compare-grid,
       .export-grid{
@@ -766,9 +808,10 @@
     <div class="footer">Everything stays in your browser via localStorage.</div>
   </div>
 
-  <!-- Ghost chatbox -->
   <div class="ghost-widget">
-    <button class="ghost-toggle" id="ghostToggle" aria-expanded="false" title="Ghost reminders">👻</button>
+    <button class="ghost-toggle" id="ghostToggle" aria-expanded="false" title="Ghost reminders">
+      <img src="ghost.png" alt="" aria-hidden="true">
+    </button>
 
     <div class="ghost-panel" id="ghostPanel">
       <div class="ghost-head">
@@ -783,6 +826,8 @@
       </div>
     </div>
   </div>
+
+  <img id="cursorGhost" class="cursor-ghost" src="ghost1.png" alt="" aria-hidden="true">
 
   <script src="popup.js"></script>
 </body>
